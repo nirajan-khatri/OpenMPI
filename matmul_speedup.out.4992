@@ -1,0 +1,64 @@
+===========================================
+Speedup Measurement: matmul (Row-Block)
+Matrix size: 8000x8000, Seed: 42
+Date: Thu Feb 19 05:48:24 PM CET 2026
+===========================================
+
+--- 1 node(s), 64 MPI processes ---
+Run 1/3:
+Checksum: 127994455599.950012
+Execution time with 64 ranks: 51.39 s
+Run 2/3:
+Checksum: 127994455599.950012
+Execution time with 64 ranks: 51.54 s
+Run 3/3:
+Checksum: 127994455599.950012
+Execution time with 64 ranks: 51.39 s
+
+--- 2 node(s), 128 MPI processes ---
+Run 1/3:
+Checksum: 127994455599.950012
+Execution time with 128 ranks: 28.49 s
+Run 2/3:
+Checksum: 127994455599.950012
+Execution time with 128 ranks: 28.49 s
+Run 3/3:
+Checksum: 127994455599.950012
+Execution time with 128 ranks: 28.49 s
+
+--- 4 node(s), 256 MPI processes ---
+Run 1/3:
+Checksum: 127994455599.950012
+Execution time with 256 ranks: 16.97 s
+Run 2/3:
+Checksum: 127994455599.950012
+Execution time with 256 ranks: 16.82 s
+Run 3/3:
+Checksum: 127994455599.950012
+Execution time with 256 ranks: 16.89 s
+
+--- 6 node(s), 384 MPI processes ---
+Run 1/3:
+Checksum: 127994455599.950012
+Execution time with 384 ranks: 12.84 s
+Run 2/3:
+Checksum: 127994455599.950012
+Execution time with 384 ranks: 12.95 s
+Run 3/3:
+Checksum: 127994455599.950012
+Execution time with 384 ranks: 12.86 s
+
+--- 8 node(s), 512 MPI processes ---
+Run 1/3:
+Checksum: 127994455599.950012
+Execution time with 512 ranks: 10.95 s
+Run 2/3:
+Checksum: 127994455599.950012
+Execution time with 512 ranks: 11.11 s
+Run 3/3:
+Checksum: 127994455599.950012
+Execution time with 512 ranks: 10.95 s
+
+===========================================
+Speedup measurement complete.
+===========================================
