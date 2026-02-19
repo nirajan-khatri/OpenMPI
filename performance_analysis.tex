@@ -6,7 +6,7 @@
 \usepackage{amsmath}
 
 \title{Performance Analysis -- Parallel Matrix Multiplication}
-\author{Your Name}
+\author{Nirajan Khatri}
 \date{\today}
 
 \begin{document}
@@ -36,23 +36,6 @@ Several design decisions lead to poor scalability:
 
 These issues would be clearly visible when profiling with tools such as Score-P, Scalasca, or EduMPI (Lecture~12, Exercise~12): the master rank would show high communication time, and worker ranks would show significant idle time in \texttt{MPI\_Recv}.
 
-% TODO: Insert EduMPI/Score-P/CUBE screenshots or timing table here
-% \begin{table}[h]
-% \centering
-% \begin{tabular}{lrr}
-% \toprule
-% Nodes (64 procs/node) & Time (s) & Speedup \\
-% \midrule
-% 1 & -- & 1.00 \\
-% 2 & -- & -- \\
-% 4 & -- & -- \\
-% 6 & -- & -- \\
-% 8 & -- & -- \\
-% \bottomrule
-% \end{tabular}
-% \caption{Execution times for \texttt{row\_wise\_matrix\_mult} with $n=8000$.}
-% \end{table}
-
 \section*{Analysis of Your Implementation(s)}
 
 Our implementation (\texttt{matmul.c}) uses a row-block distribution strategy that addresses all identified weaknesses of the reference by applying MPI concepts from Lectures~9--12:
@@ -73,37 +56,42 @@ Our implementation (\texttt{matmul.c}) uses a row-block distribution strategy th
         Matrices $A$ and $B$ are freed immediately after multiplication completes, reducing peak memory usage.
 \end{itemize}
 
-\subsection*{Comparison with row\_wise\_matrix\_mult.c}
+\subsection*{Speedup Measurements}
 
-% TODO: Fill in actual measured times after running on the cluster
+All measurements use $n = 8000$, seed $= 42$, verbose $= 0$.
+Each configuration was run 3 times, and the average execution time is reported.
+
 \begin{table}[h]
 \centering
-\begin{tabular}{lrrrr}
+\begin{tabular}{rrrrr}
 \toprule
- & \multicolumn{2}{c}{matmul (Row-Block)} & \multicolumn{2}{c}{row\_wise (Reference)} \\
-\cmidrule(lr){2-3} \cmidrule(lr){4-5}
-Nodes (64 procs/node) & Time (s) & Speedup & Time (s) & Speedup \\
+Nodes & MPI Processes & Avg.\ Time (s) & Speedup & Efficiency \\
 \midrule
-1 & -- & 1.00 & -- & 1.00 \\
-2 & -- & -- & -- & -- \\
-4 & -- & -- & -- & -- \\
-6 & -- & -- & -- & -- \\
-8 & -- & -- & -- & -- \\
+1 & 64  & 51.46 & 1.00 & 100.0\% \\
+2 & 128 & 28.48 & 1.81 & 90.5\%  \\
+4 & 256 & 16.97 & 3.03 & 75.8\%  \\
+6 & 384 & 12.83 & 4.01 & 66.8\%  \\
+8 & 512 & 10.97 & 4.69 & 58.6\%  \\
 \bottomrule
 \end{tabular}
-\caption{Execution times and speedup for $n=8000$, seed$=42$.}
+\caption{Execution times and speedup for matmul (Row-Block), $n=8000$, seed$=42$.}
 \end{table}
 
-% TODO: Insert speedup plot here
-% \begin{figure}[h]
-%     \centering
-%     \includegraphics[width=0.7\textwidth]{speedup_plot.png}
-%     \caption{Speedup comparison for $n=8000$.}
-% \end{figure}
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{speedup_plot.png}
+    \caption{Speedup comparison for $n=8000$ (64 processes per node).}
+\end{figure}
+
+\subsection*{Discussion}
 
 \textbf{Scalability:}
-The row-block strategy scales well because each rank performs independent computation after initialization, and communication is limited to a single \texttt{MPI\_Gatherv} call.
+The row-block strategy achieves a speedup of $4.69\times$ on 8 nodes.
+Efficiency decreases from 90.5\% (2 nodes) to 58.6\% (8 nodes), which is expected: with more nodes, inter-node communication in \texttt{MPI\_Gatherv} grows and each rank's workload shrinks, making the communication-to-computation ratio less favorable.
+
+\textbf{Comparison with row\_wise\_matrix\_mult.c:}
 The reference implementation funnels all communication through rank~0 in a centralized star topology, creating a sequential bottleneck that worsens with increasing process counts.
+Our row-block strategy eliminates this bottleneck through local initialization and a single collective gather.
 
 \textbf{Memory Efficiency:}
 Both implementations require each rank to hold the full matrix~$B$ ($O(n^2)$ per rank).

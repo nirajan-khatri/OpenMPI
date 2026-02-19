@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -l
 ####### Mail Notify / Job Name / Comment #######
 #SBATCH --job-name="matmul_test"
 
