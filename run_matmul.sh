@@ -17,8 +17,7 @@
 #SBATCH --error=%x.err.%j
 
 # Load modules
-module load gcc/14.3.0
-module load openmpi
+module load gcc/14.3.0 openmpi
 
 # Compile
 make clean && make
@@ -42,7 +41,7 @@ for NODES in 1 2 4 6 8; do
     echo "--- ${NODES} node(s), ${NP} MPI processes ---"
     for RUN in $(seq 1 $RUNS); do
         echo "Run ${RUN}/${RUNS}:"
-        srun --nodes=${NODES} --ntasks=${NP} --ntasks-per-node=64 ./matmul ${N} ${SEED} ${VERBOSE}
+        mpirun -np ${NP} --map-by node --bind-to core ./matmul ${N} ${SEED} ${VERBOSE}
     done
     echo ""
 done

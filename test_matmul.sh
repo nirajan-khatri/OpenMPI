@@ -20,12 +20,12 @@ module load gcc/14.3.0 openmpi
 make clean && make
 
 echo "=== Test 1: verbose, 4 procs ==="
-srun --ntasks=4 ./matmul 4 42 1
+mpirun -np 4 ./matmul 4 42 1
 
 echo ""
 echo "=== Test 2: non-verbose, 4 procs ==="
-srun --ntasks=4 ./matmul 4 42 0
+mpirun -np 4 ./matmul 4 42 0
 
 echo ""
 echo "=== Test 3: verbose, 1 proc ==="
-srun --ntasks=1 ./matmul 4 42 1
+mpirun -np 1 ./matmul 4 42 1
