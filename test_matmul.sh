@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/usr/bin/env bash
 ####### Mail Notify / Job Name / Comment #######
 #SBATCH --job-name="matmul_test"
 
@@ -15,9 +15,6 @@
 ####### Output #######
 #SBATCH --output=%x.out.%j
 #SBATCH --error=%x.err.%j
-
-module load gcc/14.3.0 openmpi
-make clean && make
 
 echo "=== Test 1: verbose, 4 procs ==="
 mpirun -np 4 ./matmul 4 42 1

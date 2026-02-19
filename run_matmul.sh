@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/usr/bin/env bash
 ####### Mail Notify / Job Name / Comment #######
 #SBATCH --job-name="matmul_speedup"
 
@@ -15,12 +15,6 @@
 ####### Output #######
 #SBATCH --output=%x.out.%j
 #SBATCH --error=%x.err.%j
-
-# Load modules
-module load gcc/14.3.0 openmpi
-
-# Compile
-make clean && make
 
 # Parameters
 N=8000
