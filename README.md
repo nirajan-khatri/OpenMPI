@@ -65,4 +65,4 @@ Each configuration is run 3 times for averaging.
 ## External Sources
 
 - `row_wise_matrix_mult.c` provided on Moodle (`my_rand`, `concatenate` functions)
-- AI tool (GitHub Copilot / ChatGPT) used for code structure guidance
+- AI tool (Gemini) used for code structure guidance
