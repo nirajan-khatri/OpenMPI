@@ -1,0 +1,116 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+
+\title{Performance Analysis -- Parallel Matrix Multiplication}
+\author{Your Name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Analysis of row\_wise\_matrix\_mult.c}
+
+The reference implementation uses a master-worker pattern where rank~0 acts as a dispatcher and performs no computation itself.
+Several design decisions lead to poor scalability:
+
+\begin{enumerate}
+    \item \textbf{Row-by-row broadcast of B:}
+        Matrix~$B$ is broadcast one row at a time ($n$ separate \texttt{MPI\_Bcast} calls), resulting in $O(n)$ latency-bound messages instead of a single bulk operation.
+        As discussed in Lecture~11, collective operations should operate on large data chunks for efficiency.
+    \item \textbf{Master bottleneck (Late Sender/Receiver):}
+        All rows of $A$ are sent individually by rank~0 to workers via blocking \texttt{MPI\_Send}/\texttt{MPI\_Recv}.
+        This creates a centralized communication pattern prone to Late Sender and Late Receiver problems (Lecture~12), where workers idle waiting for rows from the master.
+    \item \textbf{Fine granularity:}
+        Each message carries exactly one row ($n$ doubles), so message startup latency dominates for small to moderate $n$.
+    \item \textbf{Idle master:}
+        Rank~0 only dispatches work and collects results; it wastes one core that could contribute to computation.
+    \item \textbf{No overlap of communication and computation:}
+        All communication is blocking (Lecture~10), preventing any overlap of computation with data transfer.
+    \item \textbf{Memory concentration:}
+        Rank~0 allocates three full $n \times n$ matrices ($A$, $B$, and $C$), which limits scalability for large $n$.
+\end{enumerate}
+
+These issues would be clearly visible when profiling with tools such as Score-P, Scalasca, or EduMPI (Lecture~12, Exercise~12): the master rank would show high communication time, and worker ranks would show significant idle time in \texttt{MPI\_Recv}.
+
+% TODO: Insert EduMPI/Score-P/CUBE screenshots or timing table here
+% \begin{table}[h]
+% \centering
+% \begin{tabular}{lrr}
+% \toprule
+% Nodes (64 procs/node) & Time (s) & Speedup \\
+% \midrule
+% 1 & -- & 1.00 \\
+% 2 & -- & -- \\
+% 4 & -- & -- \\
+% 6 & -- & -- \\
+% 8 & -- & -- \\
+% \bottomrule
+% \end{tabular}
+% \caption{Execution times for \texttt{row\_wise\_matrix\_mult} with $n=8000$.}
+% \end{table}
+
+\section*{Analysis of Your Implementation(s)}
+
+Our implementation (\texttt{matmul.c}) uses a row-block distribution strategy that addresses all identified weaknesses of the reference by applying MPI concepts from Lectures~9--12:
+
+\begin{itemize}
+    \item \textbf{Local initialization (no communication):}
+        Every rank generates its own rows of $A$ and the full matrix $B$ independently using the deterministic RNG.
+        This eliminates all initialization communication---no \texttt{MPI\_Bcast} calls needed.
+    \item \textbf{All ranks compute (no idle master):}
+        Work is divided evenly using the $\lfloor n/p \rfloor + 1$ pattern from Exercise~11 Task~4, with the first $n \bmod p$ ranks receiving one extra row.
+    \item \textbf{Cache-efficient multiplication:}
+        The \textit{i-k-j} loop order ensures sequential access to $B$ (row-major), providing excellent cache locality.
+    \item \textbf{Collective gather via \texttt{MPI\_Gatherv} (Lecture 11):}
+        The variable-count gather (\texttt{MPI\_Gatherv}) collects uneven row blocks at rank~0 in a single optimized collective call, replacing the $2n$ individual point-to-point messages used by the reference.
+    \item \textbf{Deadlock-free (Lecture 10):}
+        Only collective operations are used---no circular point-to-point dependencies that could cause deadlocks.
+    \item \textbf{Early memory release:}
+        Matrices $A$ and $B$ are freed immediately after multiplication completes, reducing peak memory usage.
+\end{itemize}
+
+\subsection*{Comparison with row\_wise\_matrix\_mult.c}
+
+% TODO: Fill in actual measured times after running on the cluster
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{matmul (Row-Block)} & \multicolumn{2}{c}{row\_wise (Reference)} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5}
+Nodes (64 procs/node) & Time (s) & Speedup & Time (s) & Speedup \\
+\midrule
+1 & -- & 1.00 & -- & 1.00 \\
+2 & -- & -- & -- & -- \\
+4 & -- & -- & -- & -- \\
+6 & -- & -- & -- & -- \\
+8 & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\caption{Execution times and speedup for $n=8000$, seed$=42$.}
+\end{table}
+
+% TODO: Insert speedup plot here
+% \begin{figure}[h]
+%     \centering
+%     \includegraphics[width=0.7\textwidth]{speedup_plot.png}
+%     \caption{Speedup comparison for $n=8000$.}
+% \end{figure}
+
+\textbf{Scalability:}
+The row-block strategy scales well because each rank performs independent computation after initialization, and communication is limited to a single \texttt{MPI\_Gatherv} call.
+The reference implementation funnels all communication through rank~0 in a centralized star topology, creating a sequential bottleneck that worsens with increasing process counts.
+
+\textbf{Memory Efficiency:}
+Both implementations require each rank to hold the full matrix~$B$ ($O(n^2)$ per rank).
+However, the row-block strategy distributes $A$ and $C$ across ranks ($O(n^2/p)$ each), whereas the reference concentrates all three full matrices on rank~0.
+
+\textbf{MPI Communication:}
+The row-block strategy uses a single \texttt{MPI\_Gatherv} collective ($O(n^2)$ data moved via optimized tree-based algorithm).
+The reference uses $n$ individual \texttt{MPI\_Bcast} calls for $B$ plus $2n$ point-to-point messages for $A$ rows and results, leading to much higher message overhead and latency.
+
+\end{document}
